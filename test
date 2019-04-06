@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar  5 14:09:45 2019
+
+@author: dipesh
+"""
+
+import numpy as np
+import pandas as pd
+
+import csv
+import random
+import math
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+#%matplotlib inline
+
+from sklearn.model_selection import cross_val_score
+# from sklearn.model_selection import StratifiedKFold
+from sklearn import model_selection
+
+from sklearn import metrics
+from sklearn.metrics import accuracy_score
+
+
+
+dataset = pd.read_csv('bank-additional-full.csv')
+print(dataset.shape)
+dataset.head()
+
+
+
+# Exploratory Analysis:
+# Categorical Variables:
+# We first start the exploratory analysis of the categorical variables and see what are the categories and are there any missing values for these categories. Here, we used the seaborn package to create the bar graphs below.
+
+
+categorcial_variables = ['job', 'marital', 'education', 'default', 'loan', 'contact', 'month', 'day_of_week', 'poutcome','y']
+for col in categorcial_variables:
+    plt.figure(figsize=(10,4))
+    sns.barplot(dataset[col].value_counts().values, dataset[col].value_counts().index)
+    plt.title(col)
+    plt.tight_layout()
+plt.show()
+
+
+# List of normalized relative frequency of the target class per category.¶
+# Normalized distribution of each class per feature and plotted difference between positive and negative frequencies. Positive values imply this category favors clients that will subscribe and negative values categories that favor not buying the product.
+
+
+for col in categorcial_variables:
+    plt.figure(figsize=(10,4))
+    #Returns counts of unique values for each outcome for each feature.
+    pos_counts = dataset.loc[dataset.y.values == 'yes', col].value_counts() 
+    neg_counts = dataset.loc[dataset.y.values == 'no', col].value_counts()
+    
+    all_counts = list(set(list(pos_counts.index) + list(neg_counts.index)))
+    
+    #Counts of how often each outcome was recorded.
+    freq_pos = (dataset.y.values == 'yes').sum()
+    freq_neg = (dataset.y.values == 'no').sum()
+    
+    pos_counts = pos_counts.to_dict()
+    neg_counts = neg_counts.to_dict()
+    
+    all_index = list(all_counts)
+    all_counts = [pos_counts.get(k, 0) /  freq_pos - neg_counts.get(k, 0)  / freq_neg for k in all_counts]
+
+    sns.barplot(all_counts, all_index)
+    plt.title(col)
+    plt.tight_layout()
+    
+    
+    # Inference/Result: There are unknown values for many variables in the Data set. There are many ways to handle missing data. One of the ways is to discard the row but that would lead to reduction of data set and hence would not be an accurate model.
+    # Other method is to infer the value of the unknown from other variables. Here we use other independent variables to infer missing values.
+    # Variables with unknown/missing values are: 'education', 'job', 'housing', 'loan', 'default', and 'marital'.
+    
+# Imputation    
+    
+df = dataset
+
+df['job'][df['age']>60].value_counts()
+
+    # From this we can infer that most of the members with age above 60 are retired and hence we can replace unknown job values with 60+ age as retired.
+
+df.loc[(df["age"]>60) & (df["job"]=='unknown'), 'job'] = 'retired'
+
+    # Now, to infer the missing values in 'job' and 'education', we make use of the cross-tabulation between 'job' and 'education'. Our hypothesis here is that 'job' is influenced by the 'education' of a person. Hence, we can infer 'job' based on the education of the person.
+
+def cross_tab(df,f1,f2):
+    jobs=list(df[f1].unique())
+    edu=list(df[f2].unique())
+    dataframes=[]
+    for e in edu:
+        dfe=df[df[f2]==e]
+        dfejob=dfe.groupby(f1).count()[f2]
+        dataframes.append(dfejob)
+    xx=pd.concat(dataframes,axis=1)
+    xx.columns=edu
+    xx=xx.fillna(0)
+    return xx
+
+crossTab = cross_tab(df,'job','education')
+
+crossTab
+
+max_values = crossTab.idxmax(axis=1) #this stores key-value pair of job-education to predict education
+max_values1 = crossTab.idxmax(axis=0)#this stores key-value pair of educaiton-job to predict job
+
+max_values
+
+max_values1
+
+
+max_values1.pop('unknown')
+max_values.pop('unknown')
+
+    # There maybe be some rows whose education and job both is unknown so we randomly choose a job and then predict education using this value. Since the unknown count in education is significantly high we are predicting job rather than education.
+
+df.loc[(df['education']=='unknown') & (df['job']=='unknown'),'job'] = random.choice(max_values1)
+
+# Replaces unknown values of education based on job
+for i in max_values.keys():
+    df.loc[(df['education'] =='unknown') & (df['job'] == i),'education'] = max_values[i]
+    
+# Replaces unknown values of job based on education
+for i in max_values1.keys():
+    df.loc[(df['job'] =='unknown') & (df['education'] == i),'job'] = max_values1[i]
+    
+dummiess = pd.get_dummies(df['pdays'])
+
+
+ # Missing pdays values
+
+# s = df.groupby("keys").ids.agg(lambda x:len(x.unique()))
+pd.value_counts(df['pdays']).plot(kind="bar")
+
+    # From the plot we can see that majority of the values are '999' i.e., the cutomer has never contacted before. So we are dropping this column as this may not be as useful.
+
+df = df.drop('pdays', axis=1);
+
+mapping = {'unknown': np.nan, 'nonexistent': np.nan, 'yes': 1, 'no': 0, 'success': 1, 'failure': 0}
+df = df.replace(mapping)
+# df['pdays'] = df['pdays'].replace(999 , 0)
+
+categorical_variables = ['marital', 'contact', 'month', 'day_of_week']
+
+df[['default', 'housing', 'loan', 'poutcome', 'y']] = df[['default', 'housing', 'loan', 'poutcome', 'y']].apply(pd.to_numeric)
+
+g = df.columns.to_series().groupby(df.dtypes).groups
+g
+
+
+# Replacing NaN values
+
+
+    # Here we are replacing all missing categorical values with random values and as 'job' and 'education' were replaced earlier there are excluded from the categorical values. And all other numerical values are replaced by their mean values.
+
+
+for i in df:
+    if i in categorical_variables: 
+        uniques = list(df[i].unique())
+        if np.nan in uniques:
+            uniques.remove(np.nan)
+        print(uniques)
+        k = 0
+        for j in df[i]:
+            if j is np.nan:
+                df[i][k] = random.choice(uniques)
+            k += 1
+    elif i == 'job' or i == 'education':
+        continue
+    else:
+        print(i)
+        for j in range(len(df[i])):
+            if math.isnan(df[i][j]):
+                df[i].fillna(df[i].mean(),inplace=True)
+                
+
+len(df) - df.count() #Here count() tells us the number of non-NaN values, and this is subtracted from the total number of values (given by len(df)).
+
+# Label Encoding
+
+    # Here all the categorical variables are selected and encoded using label encoder
+
+
+from sklearn.preprocessing import LabelEncoder
+categorical_values  = df[['job', 'marital', 'education', 'contact', 'month', 'day_of_week']]
+
+val = LabelEncoder()
+for i in categorical_values.keys():
+    categorical_values[i] = val.fit_transform(categorical_values[i].astype('str'))
+    
+for i in categorical_values:
+    df = df.drop(i,axis =1)
+    
+y = df.iloc[:,13]
+df = df.drop('y',axis = 1)
+
+
+df = pd.concat([df, categorical_values],axis = 1)
+
+df.head()
+
+
+# Normalization
+
+    # Here the normalization is done by using Min-Max scalar. Reason for using normalization is to reduce the disparity between the values.
+
+
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+num = ['age', 'duration', 'campaign', 'previous', 'emp.var.rate', 'cons.price.idx', 'cons.conf.idx', 
+             'euribor3m', 'nr.employed']#add pdays
+df[num] = scaler.fit_transform(df[num])
+
+X = df.iloc[:,0:19]
+
+x_train, x_test, y_train, y_test = model_selection.train_test_split(X, y, test_size=0.2, shuffle = True) #80/20 split
+
+
+# Training and testing¶
+
+
+import keras
+from keras.models import Sequential
+from keras.layers import Dense
+# from keras.wrappers.scikit_learn import KerasClassifier
+
+model = Sequential()
+model.add(Dense(100, activation='tanh', input_dim=19))
+model.add(Dense(50, activation='tanh'))
+model.add(Dense(25, activation='tanh'))
+model.add(Dense(10, activation='tanh'))
+model.add(Dense(2, activation='softmax'))
+model.compile(optimizer='adagrad',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Model architecture and parameters
+model.summary()
+
+y_train = pd.get_dummies(y_train)
+
+history = model.fit(x=x_train,y=y_train,epochs=100,validation_split=0.25,verbose=0)
+
+plt.plot(history.epoch, history.history['val_loss'], 'r',
+        history.epoch, history.history['loss'], 'g')
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epochs')
+plt.legend(['train', 'validation'], loc='upper right')
+
+
+plt.plot(history.epoch, history.history['val_acc'], 'r',
+        history.epoch, history.history['acc'], 'g')
+plt.title('Accuracy of Model')
+plt.ylabel('Accuracy')
+plt.xlabel('Epochs')
+plt.legend(['train', 'validation'], loc='lower right')
+
+
+y_test = pd.get_dummies(y_test)
+
+test_loss, test_acc = model.evaluate(x_test, y_test)
+
+print('Test accuracy:', test_acc*100)

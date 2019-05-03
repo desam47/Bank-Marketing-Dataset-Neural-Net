@@ -41,6 +41,23 @@ df.sample(5)
 
 df.info()
 
+#check for any missing values
+df.apply(lambda x: sum(x.isnull()),axis=0)
+
+#From the Feature selection of our last project it is decided to remove the 'euribor3m' and 'duration' variable
+df = df.drop('euribor3m', axis=1)
+
+df = df.drop('duration', axis=1)
+
+df.info()
+
+
+# scatter plot matrix
+from pandas.tools.plotting import scatter_matrix
+
+scatter_matrix(df)
+plt.show()
+
 labels = ['job','marital','education','default','housing','loan','contact','month','day_of_week','poutcome','y']
 for l in labels:
     print(l+":")
@@ -98,7 +115,6 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, rando
 print('Train set:', X_train.shape, y_train.shape)
 print('Test set:', X_test.shape, y_test.shape)
 
-
 #Data scalling
 
 scaler = StandardScaler() 
@@ -130,7 +146,6 @@ def build_nn(activation='relu',dropout_rate=0.2, optimizer = 'adam',X=X):
     #model.add(Dropout(0.2))
     #model.add(Dense(2, activation='softmax'))
     model.summary()
-
 # Compiling the model
     model.compile(optimizer= optimizer, loss='binary_crossentropy', 
                   metrics=['accuracy'])
@@ -147,13 +162,10 @@ def build_nn(activation='relu',dropout_rate=0.2, optimizer = 'adam',X=X):
 #classifier.fit(X_train, y_train, batch_size =10, epochs = 20)
 #Wrap the ANN 
 
-model = KerasClassifier(build_fn = build_nn, epochs = 50, batch_size=25,validation_split=0.2, verbose=0)
+model = KerasClassifier(build_fn = build_nn, epochs = 50, batch_size=25, validation_split=0.2, verbose=2, shuffle=True)
 
 #history= model.fit(X_train,y_train,validation_split=0.2, verbose=0)
 history= model.fit(X_train,y_train)
-
-#plt.plot(history.epoch, history.history['val_loss'], 'r',
- #       history.epoch, history.history['loss'], 'g')
 
 
 # Model Loss over time
@@ -177,10 +189,9 @@ plt.show()
 
 #k-fold cross-validation
 #from sklearn.model_selection import cross_val_score
-accuracies = cross_val_score(estimator = model, X = X_train, y = y_train, cv=10)
+accuracies = cross_val_score(estimator = model, X = X_train, y = y_train, cv=5)
 test_acc=accuracies.mean()
 print('Test accuracy:', test_acc*100)
-
 
 
 pred = model.predict(X_test)
@@ -200,5 +211,12 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='YlGnBu', xticklabels='NY', yticklabel
 # Display the Classification Report
 
 print('Classification report: \n\n',classification_report(y_compare, pred))
+
+
+# Precision: How often the model is correct when making a prediction
+
+# Recall: How often the model can identify when an employee leaves the company
+
+# F1-Score: The weighted harmonic mean of the precision and recall of the test
 
 

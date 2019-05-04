@@ -41,6 +41,9 @@ df.sample(5)
 
 df.info()
 
+pd.set_option('display.max_columns', 200)
+df.describe(include='all')
+
 #check for any missing values
 df.apply(lambda x: sum(x.isnull()),axis=0)
 
@@ -49,14 +52,9 @@ df = df.drop('euribor3m', axis=1)
 
 df = df.drop('duration', axis=1)
 
+df.describe(include='all')
+
 df.info()
-
-
-# scatter plot matrix
-from pandas.tools.plotting import scatter_matrix
-
-scatter_matrix(df)
-plt.show()
 
 labels = ['job','marital','education','default','housing','loan','contact','month','day_of_week','poutcome','y']
 for l in labels:
@@ -111,7 +109,7 @@ X = preprocessing.StandardScaler().fit(X).transform(X.astype(float))
 
 
 # Split dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state=7)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state=1)
 print('Train set:', X_train.shape, y_train.shape)
 print('Test set:', X_test.shape, y_test.shape)
 

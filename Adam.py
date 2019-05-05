@@ -196,14 +196,14 @@ plt.show()
 #from sklearn.model_selection import cross_val_score
 accuracies = cross_val_score(estimator = estimator, X = X_train, y = y_train, cv=5)
 test_acc=accuracies.mean()
-print('Test accuracy:', test_acc*100)
+print('Cross Validation accuracy:', test_acc*100)
 
 
 pred = estimator.predict(X_test)
 #pred = np.argmax(pred, axis =1)
 y_compare = np.argmax(y_test, axis=1)
 accsco = accuracy_score(y_compare, pred)
-print("Final accuracy: {}".format(accsco*100))
+print("Accuracy: {}".format(accsco*100))
 
 
 # Plot a confusion matrix

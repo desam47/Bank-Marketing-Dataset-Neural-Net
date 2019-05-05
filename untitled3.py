@@ -142,7 +142,7 @@ model.add(Dense(2, activation='softmax'))
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 # Fit the model
-model.fit(X_test, y_test, epochs=150, batch_size=25, validation_split=0.2, verbose=2, shuffle=True)
+model.fit(X_test, y_test, epochs=100, batch_size=25, validation_split=0.2, verbose=2, shuffle=True)
 # evaluate the model
 scores = model.evaluate(X_test, y_test)
 print("\n%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))

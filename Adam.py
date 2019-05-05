@@ -122,7 +122,7 @@ X_test = scaler.transform(X_test)
 
 # Start
 
-def model(activation='relu',dropout_rate=0.2, optimizer = 'adam',X=X):
+def model(activation='relu',dropout_rate=0.2, optimizer = 'Adam',X=X):
 #initialize the Neural network
     model = Sequential()
     #Add the different layers of the ANN

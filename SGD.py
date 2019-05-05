@@ -41,6 +41,21 @@ df.sample(5)
 
 df.info()
 
+pd.set_option('display.max_columns', 200)
+df.describe(include='all')
+
+#check for any missing values
+df.apply(lambda x: sum(x.isnull()),axis=0)
+
+#From the Feature selection of our last project it is decided to remove the 'euribor3m' and 'duration' variable
+df = df.drop('euribor3m', axis=1)
+
+df = df.drop('duration', axis=1)
+
+df.describe(include='all')
+
+df.info()
+
 labels = ['job','marital','education','default','housing','loan','contact','month','day_of_week','poutcome','y']
 for l in labels:
     print(l+":")
@@ -94,10 +109,9 @@ X = preprocessing.StandardScaler().fit(X).transform(X.astype(float))
 
 
 # Split dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state=7)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state=1)
 print('Train set:', X_train.shape, y_train.shape)
 print('Test set:', X_test.shape, y_test.shape)
-
 
 #Data scalling
 
@@ -106,18 +120,15 @@ X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
 
-
-
-
-
 # Start
 
-def build_nn(activation='relu',dropout_rate=0.2, optimizer = 'SGD',X=X):
+def model(activation='relu',dropout_rate=0.2, optimizer = 'SGD',X=X):
 #initialize the Neural network
     model = Sequential()
     #Add the different layers of the ANN
-    model.add(Dense(200, input_shape=(X_train.shape[1],), 
+    model.add(Dense(150, input_shape=(X_train.shape[1],), 
                     kernel_initializer='uniform')) #Input
+    model.add(Dropout(dropout_rate))  #Droupout layer
     #model.add(Dropout(0.2))
     model.add(Dense(100, activation=activation, 
                     kernel_initializer='uniform')) #First hidden layer
@@ -125,16 +136,22 @@ def build_nn(activation='relu',dropout_rate=0.2, optimizer = 'SGD',X=X):
     #model.add(Dense(100, activation='relu'))
     model.add(Dense(50, activation=activation, 
                     kernel_initializer='uniform'))  #Second hidden layer
+    model.add(Dropout(dropout_rate))  #Droupout layer
     #model.add(Dropout(0.2))
-    model.add(Dense(25, activation=activation, 
-                    kernel_initializer='uniform'))  #Third hidden layer
-    model.add(Dense(10, activation=activation, 
-                    kernel_initializer='uniform'))  #Fourth hidden layer
+
+   # model.add(Dense(10, activation=activation, 
+    #                kernel_initializer='uniform'))  #Third hidden layer
+    #model.add(Dropout(dropout_rate))  #Droupout layer
+    #model.add(Dropout(0.2))
+    #model.add(Dense(10, activation=activation, 
+    #                kernel_initializer='uniform'))  #Fourth hidden layer
+    #model.add(Dropout(dropout_rate))  #Droupout layer
+    #model.add(Dropout(0.2))
+    
     model.add(Dense(2, activation='softmax')) #Output layer
     #model.add(Dropout(0.2))
     #model.add(Dense(2, activation='softmax'))
     model.summary()
-
 # Compiling the model
     model.compile(optimizer= optimizer, loss='binary_crossentropy', 
                   metrics=['accuracy'])
@@ -151,14 +168,10 @@ def build_nn(activation='relu',dropout_rate=0.2, optimizer = 'SGD',X=X):
 #classifier.fit(X_train, y_train, batch_size =10, epochs = 20)
 #Wrap the ANN 
 
-model = KerasClassifier(build_fn = build_nn, epochs = 50, batch_size=25,validation_split=0.2, verbose=0)
+estimator = KerasClassifier(build_fn = model, epochs = 200, batch_size=25, validation_split=0.2, verbose=2, shuffle=True)
 
 #history= model.fit(X_train,y_train,validation_split=0.2, verbose=0)
-history= model.fit(X_train,y_train)
-
-#plt.plot(history.epoch, history.history['val_loss'], 'r',
- #       history.epoch, history.history['loss'], 'g')
-
+history= estimator.fit(X_train,y_train)
 
 # Model Loss over time
 plt.plot(history.history['loss'])
@@ -181,17 +194,16 @@ plt.show()
 
 #k-fold cross-validation
 #from sklearn.model_selection import cross_val_score
-accuracies = cross_val_score(estimator = model, X = X_train, y = y_train, cv=3)
+accuracies = cross_val_score(estimator = estimator, X = X_train, y = y_train, cv=5)
 test_acc=accuracies.mean()
-print('Test accuracy:', test_acc*100)
+print('Cross Validation accuracy:', test_acc*100)
 
 
-
-pred = model.predict(X_test)
+pred = estimator.predict(X_test)
 #pred = np.argmax(pred, axis =1)
 y_compare = np.argmax(y_test, axis=1)
 accsco = accuracy_score(y_compare, pred)
-print("Final accuracy: {}".format(accsco*100))
+print("Accuracy: {}".format(accsco*100))
 
 
 # Plot a confusion matrix
@@ -204,5 +216,12 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='YlGnBu', xticklabels='NY', yticklabel
 # Display the Classification Report
 
 print('Classification report: \n\n',classification_report(y_compare, pred))
+
+
+# Precision: How often the model is correct when making a prediction
+
+# Recall: How often the model can identify when an employee leaves the company
+
+# F1-Score: The weighted harmonic mean of the precision and recall of the test
 
 

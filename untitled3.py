@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Created on Sat May  4 21:52:12 2019
+
+@author: dipesh
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # https://github.com/duaraanalytics/bankmarketing/blob/master/Analyzing%20Employee%20Churn%20with%20Keras.ipynb
 
@@ -119,109 +127,26 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
+model = Sequential()
+model.add(Dense(100, input_dim=18, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(80, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(50, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(25, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(10, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(2, activation='softmax'))
 
-# Start
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# Fit the model
+model.fit(X_test, y_test, epochs=150, batch_size=25, validation_split=0.2, verbose=2, shuffle=True)
+# evaluate the model
+scores = model.evaluate(X_test, y_test)
+print("\n%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
 
-def model(activation='relu',dropout_rate=0.2, optimizer = 'adam',X=X):
-#initialize the Neural network
-    model = Sequential()
-    #Add the different layers of the ANN
-    model.add(Dense(150, input_shape=(X_train.shape[1],), 
-                    kernel_initializer='uniform')) #Input
-    model.add(Dropout(dropout_rate))  #Droupout layer
-    #model.add(Dropout(0.2))
-    model.add(Dense(100, activation=activation, 
-                    kernel_initializer='uniform')) #First hidden layer
-    model.add(Dropout(dropout_rate))  #Droupout layer
-    #model.add(Dense(100, activation='relu'))
-    model.add(Dense(50, activation=activation, 
-                    kernel_initializer='uniform'))  #Second hidden layer
-    model.add(Dropout(dropout_rate))  #Droupout layer
-    #model.add(Dropout(0.2))
+from ann_visualizer.visualize import ann_viz;
 
-   # model.add(Dense(10, activation=activation, 
-    #                kernel_initializer='uniform'))  #Third hidden layer
-    #model.add(Dropout(dropout_rate))  #Droupout layer
-    #model.add(Dropout(0.2))
-    #model.add(Dense(10, activation=activation, 
-    #                kernel_initializer='uniform'))  #Fourth hidden layer
-    #model.add(Dropout(dropout_rate))  #Droupout layer
-    #model.add(Dropout(0.2))
-    
-    model.add(Dense(2, activation='softmax')) #Output layer
-    #model.add(Dropout(0.2))
-    #model.add(Dense(2, activation='softmax'))
-    model.summary()
-# Compiling the model
-    model.compile(optimizer= optimizer, loss='binary_crossentropy', 
-                  metrics=['accuracy'])
-    return model
-
-# Validation monitor
-#monitor = EarlyStopping(monitor='val_loss', min_delta=1e-3, patience=10, verbose=1, mode='auto')
-
-# Save best model
-#checkpointer = ModelCheckpoint(filepath="best_weights.hdf5", verbose=0, save_best_only=True)
-
-
-
-#classifier.fit(X_train, y_train, batch_size =10, epochs = 20)
-#Wrap the ANN 
-
-estimator = KerasClassifier(build_fn = model, epochs = 200, batch_size=25, validation_split=0.2, verbose=2, shuffle=True)
-
-#history= model.fit(X_train,y_train,validation_split=0.2, verbose=0)
-history= estimator.fit(X_train,y_train)
-
-# Model Loss over time
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model Loss')
-plt.ylabel('Loss')
-plt.xlabel('Epochs')
-plt.legend(['train', 'validation'], loc='upper right')
-plt.show()
-
-# Model Accuracy
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
-plt.title('Accuracy of Model')
-plt.ylabel('Accuracy')
-plt.xlabel('Epochs')
-plt.legend(['train', 'validation'], loc='lower right')
-plt.show()
-
-
-#k-fold cross-validation
-#from sklearn.model_selection import cross_val_score
-accuracies = cross_val_score(estimator = estimator, X = X_train, y = y_train, cv=5)
-test_acc=accuracies.mean()
-print('Test accuracy:', test_acc*100)
-
-
-pred = estimator.predict(X_test)
-#pred = np.argmax(pred, axis =1)
-y_compare = np.argmax(y_test, axis=1)
-accsco = accuracy_score(y_compare, pred)
-print("Final accuracy: {}".format(accsco*100))
-
-
-# Plot a confusion matrix
-y_compare = np.argmax(y_test, axis=1)
-cm = confusion_matrix(y_compare, pred)
-np.set_printoptions(precision=2)
-print(cm)
-sns.heatmap(cm, annot=True, fmt='d', cmap='YlGnBu', xticklabels='NY', yticklabels='NY')
-
-# Display the Classification Report
-
-print('Classification report: \n\n',classification_report(y_compare, pred))
-
-
-# Precision: How often the model is correct when making a prediction
-
-# Recall: How often the model can identify when an employee leaves the company
-
-# F1-Score: The weighted harmonic mean of the precision and recall of the test
-
-
+ann_viz(model, title="Bank Marketing:Neaural Net")
